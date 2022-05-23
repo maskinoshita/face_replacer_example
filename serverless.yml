@@ -11,29 +11,35 @@ provider:
   region: ap-northeast-1
 
 # you can add statements to the Lambda function's IAM Role here
-#  iam:
-#    role:
-#      statements:
-#        - Effect: "Allow"
-#          Action:
-#            - "s3:ListBucket"
-#          Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
-#        - Effect: "Allow"
-#          Action:
-#            - "s3:PutObject"
-#          Resource:
-#            Fn::Join:
-#              - ""
-#              - - "arn:aws:s3:::"
-#                - "Ref" : "ServerlessDeploymentBucket"
-#                - "/*"
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:ListBucket"
+            - "s3:GetObject"
+          Resource:
+            Fn::Join:
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref OriginalBucket
+                - "/*"
+        - Effect: "Allow"
+          Action:
+            - "s3:PutObject"
+          Resource:
+            Fn::Join:
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref ProcessedBucket
+                - "/*"
 
 # you can define service wide environment variables here
   environment:
     processed_bucket: !Ref ProcessedBucket
 
 custom:
-  suffix: "!!!!Your Name or Unique Name!!!!"
+  suffix: "mk"
 
 # you can add packaging information here
 #package:
