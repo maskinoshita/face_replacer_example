@@ -30,3 +30,68 @@
 4. `aws s3 rm s3://${ProcessedBucketName} --recursive`
 5. `aws s3 rm s3://${OriginalBucketName} --recursive`
 
+## 1. face_replacerの開発 (単体テストの実施)
+
+### 開発
+
+1. 4つの関数を作る
+    * `detectFaces`: 入力の顔画像のS3のオブジェクトを受け取ってRekognition DetectFaces APIを呼び出し、JSON形式で人数分下記の属性を返却する
+        - 属性
+            - 顔の範囲 (BoundingBox) [0.0~1.0]
+                - Left
+                - Top
+                - Width
+                - Height
+            - 顔の回転 (Pose) [rad]
+                - Pitch
+                - Roll
+                - Yaw
+            - 性別 (Gender)
+                - Male
+                - Female
+            - 感情 (Emotion/下記のうちConfidenceがもっと大きいもの)
+                - DISGUSTED
+                - HAPPY
+                - SURPRISED
+                - ANGRY
+                - CONFUSED
+                - CALM
+                - SAD
+        - ex)
+            ```json
+            [
+                {
+                    "BoundingBox": { "Left": 0.01, "Top": 0.2, "Height": 0.01, "Width": 0.01 },
+                    "Gender": "Male",
+                    "Emotion": "HAPPY"
+                },
+                ...
+            ]
+            ```
+    * `downloadOriginalImage`: 元画像をS3からローカルのテンポラリディレクトリにファイルをダウンロードし、ファイル名を返却する
+        - "/tmp/xxxx.jpg"
+    * `replaceFaces`: `detect_face`の返却値を利用と入力の顔画像のファイル名を受け取って、顔を入れ替えた画像を作成し、Bufferを返す
+        - "/tmp/xxxx.jpg"
+    * `uploadProcessedImage`: 入れ替えた画像Bufferを受け取り、出力バケットにアップロードする。また、アップロードしたオブジェクト名とアップロード時刻をDynamoDBに書き込む
+        - `env.processed_bucket`で出力バケットを参照できる
+2. ライブラリをインストールする
+    * `npm install --save aws-sdk`
+    * `npm install --save sharp`
+    * `npm install --save uuid`
+
+### 単体テスト
+
+1. テストフレームワークJestの導入
+    `npm install --save-dev jest`
+1. 4つの関数をテスタブルにする
+    - 関数がエクスポートされていないと外部のファイルから利用できない
+    - ついでにface_replacer.jsが長くなってしまっているので、外部ファイルに切り出す。
+        - face_replacer_utils.js
+
+1. テストイベントの保存先を作成 `mkdir -p events`
+2. テストイベントの作成 `sls generate-event -t aws:s3 | jq . > events/s3_add_original_image.json`
+
+## Copyright
+
+* 顔画像集は、素材ラボから取得しました。
+    - https://www.sozailab.jp/

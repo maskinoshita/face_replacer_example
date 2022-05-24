@@ -5,6 +5,7 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: nodejs14.x
+  timeout: 30
 
 # you can overwrite defaults here
 #  stage: dev
@@ -47,6 +48,7 @@ provider:
   # 加工済みの画像の保存先
   environment:
     processed_bucket: !Ref ProcessedBucket
+    item_list_table: !Ref ItemListTable
 
 custom:
   # 重要!!! 一意の名前をつけてください !!!
