@@ -10,7 +10,7 @@ provider:
 #  stage: dev
   region: ap-northeast-1
 
-# you can add statements to the Lambda function's IAM Role here
+  # LambdaのIAMロール
   iam:
     role:
       statements:
@@ -33,80 +33,118 @@ provider:
               - - "arn:aws:s3:::"
                 - !Ref ProcessedBucket
                 - "/*"
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:*"
+          Resource:
+            - !GetAtt ItemListTable.Arn
+        - Effect: "Allow"
+          Action:
+            - "rekognition:*"
+          Resource:
+            - "*"
 
-# you can define service wide environment variables here
+  # 加工済みの画像の保存先
   environment:
     processed_bucket: !Ref ProcessedBucket
 
 custom:
+  # 重要!!! 一意の名前をつけてください !!!
   suffix: "mk"
+  # s3-sync pluginの設定
+  webSiteName: face-replacer-${self:custom.suffix}
 
-# you can add packaging information here
-#package:
-#  patterns:
-#    - '!exclude-me.js'
-#    - '!exclude-me-dir/**'
-#    - include-me.js
-#    - include-me-dir/**
+# デプロイパッケージに関する設定
+package:
+ patterns:
+   - '!static/**' # 静的リソースはデプロイパッケージに含めない
 
 functions:
   face_replacer:
     handler: face_replacer.face_replacer
+    events:
+      - s3:
+          bucket: !Ref OriginalBucket
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .jpg
+          existing: true
   query:
     handler: query.query
-#    The following are a few example events you can configure
-#    NOTE: Please make sure to change your handler code to work with those events
-#    Check the event documentation for details
-#    events:
-#      - httpApi:
-#          path: /users/create
-#          method: get
-#      - websocket: $connect
-#      - s3: ${env:BUCKET}
-#      - schedule: rate(10 minutes)
-#      - sns: greeter-topic
-#      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
-#      - alexaSkill: amzn1.ask.skill.xx-xx-xx-xx
-#      - alexaSmartHome: amzn1.ask.skill.xx-xx-xx-xx
-#      - iot:
-#          sql: "SELECT * FROM 'some_topic'"
-#      - cloudwatchEvent:
-#          event:
-#            source:
-#              - "aws.ec2"
-#            detail-type:
-#              - "EC2 Instance State-change Notification"
-#            detail:
-#              state:
-#                - pending
-#      - cloudwatchLog: '/aws/lambda/hello'
-#      - cognitoUserPool:
-#          pool: MyUserPool
-#          trigger: PreSignUp
-#      - alb:
-#          listenerArn: arn:aws:elasticloadbalancing:us-east-1:XXXXXX:listener/app/my-load-balancer/50dc6c495c0c9188/
-#          priority: 1
-#          conditions:
-#            host: example.com
-#            path: /hello
+    events:
+      - httpApi:
+          path: /search
+          method: get
 
-#    Define function environment variables here
-#    environment:
-#      variable2: value2
-
-# you can add CloudFormation resource templates here
 resources:
- Resources:
+  Resources:
+    # 元画像を保存するS3バケット
     OriginalBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: "20220527-original-${self:custom.suffix}"
+        BucketName: "20220527-original-${self:custom.suffix}-${sls:stage}"
+    
+    # 加工済み画像を保存するS3バケット
     ProcessedBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: "20220527-processed-${self:custom.suffix}"
-
- Outputs:
+        BucketName: ${self:custom.webSiteName}-${sls:stage}
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+    
+    # 静的ウェブサイトホスティング用バケットポリシー (加工済み画像のS3バケット)
+    StaticSiteS3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref ProcessedBucket
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:GetObject
+              Resource:
+                Fn::Join:
+                  - ""
+                  - - "arn:aws:s3:::"
+                    - !Ref ProcessedBucket
+                    - "/*"
+    
+    # 加工済み画像の情報を持つDynamoDBテーブル
+    ItemListTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:service}-item-list-${sls:stage}
+        
+  # CloudFormationの出力 (別のCFnやServerlessFWから参照できる値)
+  Outputs:
     OriginalBucketName:
       Description: "元の顔画像の保存先バケット"
       Value: !Ref OriginalBucket
+    ProcessedBucketName:
+      Description: "加工済みの顔画像とWebページの保存先バケット"
+      Value: !Ref ProcessedBucket
+    StaticWebSiteUrl:
+      Description: "静的ウェブサイトホスティングのURL"
+      Value:
+        Fn::Join:
+          - ""
+          - - "http://"
+            - ${self:custom.webSiteName}-${sls:stage}
+            - ".s3-website-"
+            - ${aws:region}
+            - ".amazonaws.com"
+
