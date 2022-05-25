@@ -1,17 +1,41 @@
 'use strict';
 
+const AWS = require('aws-sdk');
+const dynamoDB = new AWS.DynamoDB();
+
 module.exports.query = async (event) => {
-  return {
-    statusCode: 200,
-    body: JSON.stringify(
-      {
-        message: 'Go Serverless v1.0! Your function executed successfully!',
-        input: event,
+  const tableName = process.env.item_list_table;
+  try {
+    const from = event.queryStringParameters["from"];
+    const params = {
+      FilterExpression: "createdAt >= :from",
+      ExpressionAttributeValues: {
+        ":from": {S: from},
       },
-      null,
-      2
-    ),
-  };
+      ExpressionAttributeNames: {
+        "#k" : "key"
+      },
+      ProjectionExpression: "#k",
+      TableName: tableName
+    };
+    const data = await dynamoDB.scan(params).promise();
+    const items = data.Items.filter((value, index, self) => self.indexOf(value) === index);
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+          items: items
+      }),
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        error: e.toString(),
+        input: event
+      }, null, 2)
+    };
+  }
 
   // Use this code if you don't use the http event with the LAMBDA-PROXY integration
   // return { message: 'Go Serverless v1.0! Your function executed successfully!', event };
