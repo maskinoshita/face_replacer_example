@@ -60,7 +60,6 @@ provider:
 custom:
   # 重要!!! 一意の名前をつけてください !!!
   suffix: "mk"
-  # s3-sync pluginの設定
   webSiteName: face-replacer-${self:custom.suffix}
   webSiteOrigin:
     Fn::Join:
