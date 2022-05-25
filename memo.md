@@ -86,12 +86,26 @@
 1. 4つの関数をテスタブルにする
     - 関数がエクスポートされていないと外部のファイルから利用できない
     - ついでにface_replacer.jsが長くなってしまっているので、外部ファイルに切り出す。
-        - face_replacer_utils.js
+        - `face_replacer_util.js`に切り出す
+            - `module.exports`
+            - `process.env`はライブラリ内では使わないように変更
+        - `face_replacer.js`で`face_replacer_util.js`をロードする
+1. テストコード`face_replacer_util.test.js`を作成する
+1. `package.json`にテスト実行のスクリプトを追加する
+    ```
+        ...,
+        "scripts": {
+            "test": "jest"
+        }
+    }
+    ```    
 
 1. テストイベントの保存先を作成 `mkdir -p events`
 2. テストイベントの作成 `sls generate-event -t aws:s3 | jq . > events/s3_add_original_image.json`
 
-## Copyright
+## Misc
 
 * 顔画像集は、素材ラボから取得しました。
     - https://www.sozailab.jp/
+* 顔画像
+    - https://generated.photos/
