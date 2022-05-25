@@ -45,6 +45,13 @@ provider:
           Resource:
             - "*"
 
+  # API GatewayのCORS設定
+  httpApi:
+    cors:
+      allowedOrigins:
+        - "${self:custom.webSiteOrigin}"
+      allowCredentials: false
+
   # 加工済みの画像の保存先
   environment:
     processed_bucket: !Ref ProcessedBucket
@@ -55,6 +62,14 @@ custom:
   suffix: "mk"
   # s3-sync pluginの設定
   webSiteName: face-replacer-${self:custom.suffix}
+  webSiteOrigin:
+    Fn::Join:
+    - ""
+    - - "http://"
+      - ${self:custom.webSiteName}-${sls:stage}
+      - ".s3-website-"
+      - ${aws:region}
+      - ".amazonaws.com"
 
 # デプロイパッケージに関する設定
 package:
@@ -141,12 +156,5 @@ resources:
       Value: !Ref ProcessedBucket
     StaticWebSiteUrl:
       Description: "静的ウェブサイトホスティングのURL"
-      Value:
-        Fn::Join:
-          - ""
-          - - "http://"
-            - ${self:custom.webSiteName}-${sls:stage}
-            - ".s3-website-"
-            - ${aws:region}
-            - ".amazonaws.com"
+      Value: ${self:custom.webSiteOrigin}
 
