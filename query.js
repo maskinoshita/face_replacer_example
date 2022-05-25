@@ -19,7 +19,7 @@ module.exports.query = async (event) => {
       TableName: tableName
     };
     const data = await dynamoDB.scan(params).promise();
-    const items = data.Items.filter((value, index, self) => self.indexOf(value) === index);
+    const items = data.Items.map((elem) => elem["key"]["S"]).filter((value, index, self) => self.indexOf(value) === index);
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -36,7 +36,4 @@ module.exports.query = async (event) => {
       }, null, 2)
     };
   }
-
-  // Use this code if you don't use the http event with the LAMBDA-PROXY integration
-  // return { message: 'Go Serverless v1.0! Your function executed successfully!', event };
 };

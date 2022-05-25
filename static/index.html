@@ -3,9 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <title>Face Replacer Results</title>
+    <style type="text/css">
+        #processed_images img {
+            display: block;
+            margin: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>Face Replacer </h1>
+    <div id="processed_images"></div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="text/javascript">
+        const ITEM_LIST_API_URL = "!!![自分のAPI GatewayのURLを設定してください]!!!";
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            let from = new Date();
+            from.setTime(from.getTime() - 10 * 60 * 1000); // 10分前
+            const resp = await axios.get(ITEM_LIST_API_URL, { params: { from: from.toISOString() } });
+            const items = resp.data.items.reverse();
+            const contentElem = document.getElementById("processed_images");
+            items.map((item) => {
+                const imageElem = document.createElement("img");
+                imageElem.src = `./${item}`;
+                imageElem.height = '300';
+                contentElem.appendChild(imageElem);
+            });
+        }, false);
+    </script>
 </body>
 </html>
