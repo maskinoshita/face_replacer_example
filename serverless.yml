@@ -6,6 +6,9 @@ provider:
   name: aws
   runtime: nodejs14.x
   timeout: 30
+  tracing:
+    lambda: true
+    apiGateway: true
 
 # you can overwrite defaults here
 #  stage: dev
@@ -156,4 +159,9 @@ resources:
     StaticWebSiteUrl:
       Description: "静的ウェブサイトホスティングのURL"
       Value: ${self:custom.webSiteOrigin}
-
+    DynamoTableName:
+      Description: "DynamoDBのテーブル名"
+      Value: !Ref ItemListTable
+    DynamoTableArn:
+      Description: "DynamoDBのArn"
+      Value: !GetAtt ItemListTable.Arn
