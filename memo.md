@@ -109,3 +109,7 @@
     - https://www.sozailab.jp/
 * 顔画像
     - https://generated.photos/
+
+
+* S3のローカルディレクトリの内容をS3バケットにコピー
+    * aws s3 sync static s3://[S3 Bucket]
