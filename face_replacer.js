@@ -1,5 +1,6 @@
 'use strict';
 
+const AWSXRay = require('aws-xray-sdk');
 const path = require('path');
 
 const {
@@ -16,14 +17,30 @@ module.exports.face_replacer = async (event) => {
       Key: event["Records"][0]["s3"]["object"]["key"]
     };
 
-    const faceInfos = await detectFaces(s3Input);
-    const filename = await downloadOriginalImage(s3Input);
-    const imageBuffer = await replaceFaces(filename, faceInfos);
+    const segment = AWSXRay.getSegment();
+    const wrapSubseg = async (name, func) => {
+      const subsegment = segment.addNewSubsegment(name);
+      try {
+        let result = await func();
+        subsegment.close();
+        return result;
+      } catch (error) {
+        subsegment.close(error);
+        throw error;
+      }
+    };
+
+    const faceInfos = await wrapSubseg('detectFaces',
+      async () => detectFaces(s3Input));
+    const filename = await wrapSubseg('downloadOriginalImage',
+      async ()=> downloadOriginalImage(s3Input));
+    const imageBuffer = await wrapSubseg('replaceFaces',
+      async () => replaceFaces(filename, faceInfos));
 
     const bucket = process.env.processed_bucket;
     const tableName = process.env.item_list_table;
-    const result = await uploadProcessedImage(
-      bucket, path.basename(filename), tableName, imageBuffer);
+    const result = await wrapSubseg('uploadProcessedImage',
+      async () => uploadProcessedImage(bucket, path.basename(filename), tableName, imageBuffer));
     
     console.log(`Successfully replaced faces: ${filename}`);
     return {
