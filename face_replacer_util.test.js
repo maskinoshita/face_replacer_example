@@ -1,4 +1,9 @@
 // mocking 
+// AWSXRay mocked
+jest.mock("aws-xray-sdk", () => ({
+    captureAWS: jest.fn().mockImplementation((aws) => aws)
+}));
+
 // AWS mocked
 jest.mock("aws-sdk", () => ({
     // AWS.Rekognition() mocked
