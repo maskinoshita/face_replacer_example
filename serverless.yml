@@ -54,17 +54,11 @@ provider:
           Resource:
             - "*"
 
-  # API GatewayのCORS設定
-  httpApi:
-    cors:
-      allowedOrigins:
-        - "${self:custom.webSiteOrigin}"
-      allowCredentials: false
-
   # 加工済みの画像の保存先
   environment:
     processed_bucket: !Ref ProcessedBucket
     item_list_table: !Ref ItemListTable
+    website_origin: "${self:custom.webSiteOrigin}"
 
 custom:
   # 重要!!! 一意の名前をつけてください !!!
@@ -97,9 +91,15 @@ functions:
   query:
     handler: query.query
     events:
-      - httpApi:
+      - http:
           path: /search
           method: get
+          cors:
+            origin:
+              - "${self:custom.webSiteOrigin}"
+            headers:
+              - Content-Type
+            allowCredentials: false
 
 resources:
   Resources:
