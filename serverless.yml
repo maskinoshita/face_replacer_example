@@ -47,6 +47,12 @@ provider:
             - "rekognition:*"
           Resource:
             - "*"
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource:
+            - "*"
 
   # API GatewayのCORS設定
   httpApi:
